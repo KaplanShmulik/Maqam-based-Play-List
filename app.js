@@ -1,5 +1,6 @@
 let currentRows = [];
 let currentSort = { field: null, asc: true };
+let currentlyPlaying = null;
 
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -13,18 +14,11 @@ function parseCSV(text) {
   });
 }
 
-function createEmptyCell() {
+function emptyCell() {
   return '<span></span>';
 }
 
-function createLinkCell(path, label, download=false) {
-  const id = 'link_' + Math.random().toString(36).slice(2);
-  const attrs = download ? ' download' : ' target="_blank"';
-  setTimeout(() => checkExists(id, path), 0);
-  return `<a id="${id}" href="${path}"${attrs}>${label}</a>`;
-}
-
-function checkExists(id, path) {
+function checkExistsAndReplace(id, path) {
   fetch(path, { method: 'HEAD' })
     .then(res => {
       if (!res.ok) {
@@ -36,6 +30,53 @@ function checkExists(id, path) {
       const el = document.getElementById(id);
       if (el) el.replaceWith(document.createElement('span'));
     });
+}
+
+function mp3Cell(base) {
+  if (!base) return emptyCell();
+  const playId = 'play_' + Math.random().toString(36).slice(2);
+  const audioId = 'audio_' + Math.random().toString(36).slice(2);
+  const mp3Path = base + '/audio.mp3';
+
+  setTimeout(() => checkExistsAndReplace(playId, mp3Path), 0);
+
+  return `
+    <button id="${playId}" class="play-btn" onclick="playPause('${audioId}', this)">▶</button>
+    <audio id="${audioId}" src="${mp3Path}"></audio>
+  `;
+}
+
+function fileLinkCell(base, filename, label, download=false) {
+  if (!base) return emptyCell();
+  const id = 'link_' + Math.random().toString(36).slice(2);
+  const path = base + '/' + filename;
+  const attrs = download ? ' download' : ' target="_blank"';
+  setTimeout(() => checkExistsAndReplace(id, path), 0);
+  return `<a id="${id}" href="${path}"${attrs}>${label}</a>`;
+}
+
+function playPause(audioId, btn) {
+  const audio = document.getElementById(audioId);
+  if (!audio) return;
+
+  if (currentlyPlaying && currentlyPlaying !== audio) {
+    currentlyPlaying.pause();
+    document.querySelectorAll('.play-btn').forEach(b => b.textContent = '▶');
+  }
+
+  if (audio.paused) {
+    audio.play();
+    btn.textContent = '❚❚';
+    currentlyPlaying = audio;
+  } else {
+    audio.pause();
+    btn.textContent = '▶';
+  }
+
+  audio.onended = () => {
+    btn.textContent = '▶';
+    if (currentlyPlaying === audio) currentlyPlaying = null;
+  };
 }
 
 function renderTable() {
@@ -50,13 +91,13 @@ function renderTable() {
       <td>${row.title || ''}</td>
       <td>${row.composer || ''}</td>
       <td>${row.performer || ''}</td>
-      <td>${base ? createLinkCell(base + '/audio.mp3', 'MP3', true) : createEmptyCell()}</td>
-      <td>${base ? createLinkCell(base + '/score.pdf', 'PDF') : createEmptyCell()}</td>
-      <td>${base ? createLinkCell(base + '/video.mp4', 'וידאו') : createEmptyCell()}</td>
-      <td>${base ? createLinkCell(base + '/source.mscz', 'MuseScore', true) : createEmptyCell()}</td>
+      <td>${mp3Cell(base)}</td>
+      <td>${fileLinkCell(base, 'score.pdf', 'PDF')}</td>
+      <td>${fileLinkCell(base, 'video.mp4', 'וידאו')}</td>
+      <td>${fileLinkCell(base, 'source.mscz', 'MuseScore', true)}</td>
       <td>
-        ${row.youtube ? `<a href="${row.youtube}" target="_blank">YouTube</a>` : '<span></span>'}
-        ${row.spotify ? `<a href="${row.spotify}" target="_blank">Spotify</a>` : '<span></span>'}
+        ${row.youtube ? `<a href="${row.youtube}" target="_blank">YouTube</a>` : emptyCell()}
+        ${row.spotify ? `<a href="${row.spotify}" target="_blank">Spotify</a>` : emptyCell()}
       </td>
     `;
     tbody.appendChild(tr);
