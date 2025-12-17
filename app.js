@@ -14,49 +14,62 @@ function parseCSV(text) {
   });
 }
 
-function emptyCell() {
-  return '<span></span>';
+function renderTable() {
+  const tbody = document.querySelector('#musicTable tbody');
+  tbody.innerHTML = '';
+
+  currentRows.forEach((row, rowIdx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.maqam || ''}</td>
+      <td>${row.title || ''}</td>
+      <td>${row.composer || ''}</td>
+      <td>${row.performer || ''}</td>
+      <td id="mp3-${rowIdx}"></td>
+      <td id="pdf-${rowIdx}"></td>
+      <td id="video-${rowIdx}"></td>
+      <td id="ms-${rowIdx}"></td>
+      <td>
+        ${row.youtube ? `<a href="${row.youtube}" target="_blank">YouTube</a>` : ''}
+        ${row.spotify ? `<a href="${row.spotify}" target="_blank">Spotify</a>` : ''}
+      </td>
+    `;
+    tbody.appendChild(tr);
+
+    if (row.base_path) {
+      maybeAddMp3(rowIdx, row.base_path);
+      maybeAddFile(rowIdx, row.base_path, 'score.pdf', 'PDF', 'pdf');
+      maybeAddFile(rowIdx, row.base_path, 'video.mp4', 'וידאו', 'video');
+      maybeAddFile(rowIdx, row.base_path, 'source.mscz', 'MuseScore', 'ms', true);
+    }
+  });
 }
 
-function checkExistsAndReplace(containerId, path) {
-  fetch(path, { method: 'HEAD' })
-    .then(res => {
-      if (!res.ok) {
-        const el = document.getElementById(containerId);
-        if (el) el.innerHTML = '';
-      }
-    })
-    .catch(() => {
-      const el = document.getElementById(containerId);
-      if (el) el.innerHTML = '';
-    });
-}
+function maybeAddMp3(rowIdx, base) {
+  const path = base + '/audio.mp3';
+  fetch(path, { method: 'HEAD' }).then(res => {
+    if (!res.ok) return;
+    const cell = document.getElementById(`mp3-${rowIdx}`);
+    if (!cell) return;
 
-function mp3Cell(base) {
-  if (!base) return emptyCell();
-
-  const containerId = 'mp3_' + Math.random().toString(36).slice(2);
-  const audioId = 'audio_' + Math.random().toString(36).slice(2);
-  const mp3Path = base + '/audio.mp3';
-
-  setTimeout(() => checkExistsAndReplace(containerId, mp3Path), 0);
-
-  return `
-    <span id="${containerId}">
+    const audioId = `audio-${rowIdx}`;
+    cell.innerHTML = `
       <button class="play-btn" onclick="playPause('${audioId}', this)">▶</button>
-      <a href="${mp3Path}" download class="mp3-download">MP3</a>
-      <audio id="${audioId}" src="${mp3Path}"></audio>
-    </span>
-  `;
+      <a href="${path}" download>MP3</a>
+      <audio id="${audioId}" src="${path}"></audio>
+    `;
+  });
 }
 
-function fileLinkCell(base, filename, label, download=false) {
-  if (!base) return emptyCell();
-  const id = 'link_' + Math.random().toString(36).slice(2);
+function maybeAddFile(rowIdx, base, filename, label, prefix, download=false) {
   const path = base + '/' + filename;
-  const attrs = download ? ' download' : ' target="_blank"';
-  setTimeout(() => checkExistsAndReplace(id, path), 0);
-  return `<a id="${id}" href="${path}"${attrs}>${label}</a>`;
+  fetch(path, { method: 'HEAD' }).then(res => {
+    if (!res.ok) return;
+    const cell = document.getElementById(`${prefix}-${rowIdx}`);
+    if (!cell) return;
+    const attrs = download ? ' download' : ' target="_blank"';
+    cell.innerHTML = `<a href="${path}"${attrs}>${label}</a>`;
+  });
 }
 
 function playPause(audioId, btn) {
@@ -83,31 +96,6 @@ function playPause(audioId, btn) {
   };
 }
 
-function renderTable() {
-  const tbody = document.querySelector('#musicTable tbody');
-  tbody.innerHTML = '';
-
-  currentRows.forEach(row => {
-    const base = row.base_path;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${row.maqam || ''}</td>
-      <td>${row.title || ''}</td>
-      <td>${row.composer || ''}</td>
-      <td>${row.performer || ''}</td>
-      <td>${mp3Cell(base)}</td>
-      <td>${fileLinkCell(base, 'score.pdf', 'PDF')}</td>
-      <td>${fileLinkCell(base, 'video.mp4', 'וידאו')}</td>
-      <td>${fileLinkCell(base, 'source.mscz', 'MuseScore', true)}</td>
-      <td>
-        ${row.youtube ? `<a href="${row.youtube}" target="_blank">YouTube</a>` : emptyCell()}
-        ${row.spotify ? `<a href="${row.spotify}" target="_blank">Spotify</a>` : emptyCell()}
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
 function sortBy(field, asc) {
   currentRows.sort((a, b) => {
     const va = (a[field] || '').trim();
@@ -115,6 +103,7 @@ function sortBy(field, asc) {
     const cmp = va.localeCompare(vb, 'he');
     return asc ? cmp : -cmp;
   });
+  renderTable();
 }
 
 function setupSorting() {
@@ -130,7 +119,6 @@ function setupSorting() {
       }
 
       sortBy(currentSort.field, currentSort.asc);
-      renderTable();
     });
   });
 }
