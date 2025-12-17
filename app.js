@@ -13,6 +13,12 @@ function parseCSV(text) {
   });
 }
 
+function fileLink(path, label, download=false) {
+  if (!path) return '<span></span>';
+  const attrs = download ? ' download' : ' target="_blank"';
+  return `<a href="${path}"${attrs}>${label}</a>`;
+}
+
 function renderTable() {
   const tbody = document.querySelector('#musicTable tbody');
   tbody.innerHTML = '';
@@ -25,15 +31,13 @@ function renderTable() {
       <td>${row.title || ''}</td>
       <td>${row.composer || ''}</td>
       <td>${row.performer || ''}</td>
+      <td>${fileLink(base ? base + '/audio.mp3' : '', 'MP3', true)}</td>
+      <td>${fileLink(base ? base + '/score.pdf' : '', 'PDF')}</td>
+      <td>${fileLink(base ? base + '/video.mp4' : '', 'וידאו')}</td>
+      <td>${fileLink(base ? base + '/source.mscz' : '', 'MuseScore', true)}</td>
       <td>
-        ${row.youtube ? `<a href="${row.youtube}" target="_blank">YouTube</a>` : ''}
-        ${row.spotify ? `<a href="${row.spotify}" target="_blank">Spotify</a>` : ''}
-      </td>
-      <td>
-        <a href="${base}/audio.mp3" download>MP3</a>
-        <a href="${base}/score.pdf" target="_blank">PDF</a>
-        <a href="${base}/video.mp4" target="_blank">וידאו</a>
-        <a href="${base}/source.mscz" download>MuseScore</a>
+        ${row.youtube ? `<a href="${row.youtube}" target="_blank">YouTube</a>` : '<span></span>'}
+        ${row.spotify ? `<a href="${row.spotify}" target="_blank">Spotify</a>` : '<span></span>'}
       </td>
     `;
     tbody.appendChild(tr);
