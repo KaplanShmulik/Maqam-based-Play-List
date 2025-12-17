@@ -18,31 +18,35 @@ function emptyCell() {
   return '<span></span>';
 }
 
-function checkExistsAndReplace(id, path) {
+function checkExistsAndReplace(containerId, path) {
   fetch(path, { method: 'HEAD' })
     .then(res => {
       if (!res.ok) {
-        const el = document.getElementById(id);
-        if (el) el.replaceWith(document.createElement('span'));
+        const el = document.getElementById(containerId);
+        if (el) el.innerHTML = '';
       }
     })
     .catch(() => {
-      const el = document.getElementById(id);
-      if (el) el.replaceWith(document.createElement('span'));
+      const el = document.getElementById(containerId);
+      if (el) el.innerHTML = '';
     });
 }
 
 function mp3Cell(base) {
   if (!base) return emptyCell();
-  const playId = 'play_' + Math.random().toString(36).slice(2);
+
+  const containerId = 'mp3_' + Math.random().toString(36).slice(2);
   const audioId = 'audio_' + Math.random().toString(36).slice(2);
   const mp3Path = base + '/audio.mp3';
 
-  setTimeout(() => checkExistsAndReplace(playId, mp3Path), 0);
+  setTimeout(() => checkExistsAndReplace(containerId, mp3Path), 0);
 
   return `
-    <button id="${playId}" class="play-btn" onclick="playPause('${audioId}', this)">▶</button>
-    <audio id="${audioId}" src="${mp3Path}"></audio>
+    <span id="${containerId}">
+      <button class="play-btn" onclick="playPause('${audioId}', this)">▶</button>
+      <a href="${mp3Path}" download class="mp3-download">MP3</a>
+      <audio id="${audioId}" src="${mp3Path}"></audio>
+    </span>
   `;
 }
 
