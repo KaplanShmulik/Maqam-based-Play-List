@@ -13,10 +13,29 @@ function parseCSV(text) {
   });
 }
 
-function fileLink(path, label, download=false) {
-  if (!path) return '<span></span>';
+function createEmptyCell() {
+  return '<span></span>';
+}
+
+function createLinkCell(path, label, download=false) {
+  const id = 'link_' + Math.random().toString(36).slice(2);
   const attrs = download ? ' download' : ' target="_blank"';
-  return `<a href="${path}"${attrs}>${label}</a>`;
+  setTimeout(() => checkExists(id, path), 0);
+  return `<a id="${id}" href="${path}"${attrs}>${label}</a>`;
+}
+
+function checkExists(id, path) {
+  fetch(path, { method: 'HEAD' })
+    .then(res => {
+      if (!res.ok) {
+        const el = document.getElementById(id);
+        if (el) el.replaceWith(document.createElement('span'));
+      }
+    })
+    .catch(() => {
+      const el = document.getElementById(id);
+      if (el) el.replaceWith(document.createElement('span'));
+    });
 }
 
 function renderTable() {
@@ -31,10 +50,10 @@ function renderTable() {
       <td>${row.title || ''}</td>
       <td>${row.composer || ''}</td>
       <td>${row.performer || ''}</td>
-      <td>${fileLink(base ? base + '/audio.mp3' : '', 'MP3', true)}</td>
-      <td>${fileLink(base ? base + '/score.pdf' : '', 'PDF')}</td>
-      <td>${fileLink(base ? base + '/video.mp4' : '', 'וידאו')}</td>
-      <td>${fileLink(base ? base + '/source.mscz' : '', 'MuseScore', true)}</td>
+      <td>${base ? createLinkCell(base + '/audio.mp3', 'MP3', true) : createEmptyCell()}</td>
+      <td>${base ? createLinkCell(base + '/score.pdf', 'PDF') : createEmptyCell()}</td>
+      <td>${base ? createLinkCell(base + '/video.mp4', 'וידאו') : createEmptyCell()}</td>
+      <td>${base ? createLinkCell(base + '/source.mscz', 'MuseScore', true) : createEmptyCell()}</td>
       <td>
         ${row.youtube ? `<a href="${row.youtube}" target="_blank">YouTube</a>` : '<span></span>'}
         ${row.spotify ? `<a href="${row.spotify}" target="_blank">Spotify</a>` : '<span></span>'}
