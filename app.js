@@ -1,9 +1,9 @@
 let allRows = [];
-let sortStack = []; // supports stable multi-level sorting
+let currentSort = { field: null, asc: true };
 
 function parseCSV(text) {
   const lines = text.trim().split('\n');
-  const headers = lines.shift().split(',');
+  const headers = lines.shift().split(',').map(h => h.trim());
 
   return lines.map((line, idx) => {
     const obj = { __index: idx };
@@ -12,17 +12,19 @@ function parseCSV(text) {
   });
 }
 
-function stableSort(rows) {
-  if (sortStack.length === 0) return rows;
+function stableSingleSort(rows) {
+  if (!currentSort.field) return rows;
+
+  const { field, asc } = currentSort;
 
   return rows.slice().sort((a, b) => {
-    for (const { field, asc } of sortStack) {
-      const va = (a[field] || '').trim();
-      const vb = (b[field] || '').trim();
-      const cmp = va.localeCompare(vb, 'he');
-      if (cmp !== 0) return asc ? cmp : -cmp;
-    }
-    return a.__index - b.__index; // stability guarantee
+    const va = (a[field] || '').trim();
+    const vb = (b[field] || '').trim();
+    const cmp = va.localeCompare(vb, 'he');
+    if (cmp !== 0) return asc ? cmp : -cmp;
+
+    // stable: preserve previous order
+    return a.__index - b.__index;
   });
 }
 
@@ -30,16 +32,16 @@ function renderTable() {
   const tbody = document.querySelector('#musicTable tbody');
   tbody.innerHTML = '';
 
-  const rows = stableSort(allRows);
+  const rows = stableSingleSort(allRows);
 
   rows.forEach(row => {
     const base = row.base_path;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${row.maqam}</td>
-      <td>${row.title}</td>
-      <td>${row.composer}</td>
-      <td>${row.performer}</td>
+      <td>${row.maqam || ''}</td>
+      <td>${row.title || ''}</td>
+      <td>${row.composer || ''}</td>
+      <td>${row.performer || ''}</td>
       <td>
         ${row.youtube ? `<a href="${row.youtube}" target="_blank">YouTube</a>` : ''}
         ${row.spotify ? `<a href="${row.spotify}" target="_blank">Spotify</a>` : ''}
@@ -59,12 +61,12 @@ function setupSorting() {
   document.querySelectorAll('th[data-sort]').forEach(th => {
     th.addEventListener('click', () => {
       const field = th.dataset.sort;
-      const existing = sortStack.find(s => s.field === field);
 
-      if (existing) {
-        existing.asc = !existing.asc;
+      if (currentSort.field === field) {
+        currentSort.asc = !currentSort.asc;
       } else {
-        sortStack.push({ field, asc: true });
+        currentSort.field = field;
+        currentSort.asc = true;
       }
 
       renderTable();
