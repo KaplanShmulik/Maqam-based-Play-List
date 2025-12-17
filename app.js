@@ -1,30 +1,15 @@
-let allRows = [];
+let currentRows = [];
 let currentSort = { field: null, asc: true };
 
 function parseCSV(text) {
   const lines = text.trim().split('\n');
   const headers = lines.shift().split(',').map(h => h.trim());
 
-  return lines.map((line, idx) => {
-    const obj = { __index: idx };
-    line.split(',').forEach((v, i) => obj[headers[i]] = v);
+  return lines.map(line => {
+    const values = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = values[i] || '');
     return obj;
-  });
-}
-
-function stableSingleSort(rows) {
-  if (!currentSort.field) return rows;
-
-  const { field, asc } = currentSort;
-
-  return rows.slice().sort((a, b) => {
-    const va = (a[field] || '').trim();
-    const vb = (b[field] || '').trim();
-    const cmp = va.localeCompare(vb, 'he');
-    if (cmp !== 0) return asc ? cmp : -cmp;
-
-    // stable: preserve previous order
-    return a.__index - b.__index;
   });
 }
 
@@ -32,9 +17,7 @@ function renderTable() {
   const tbody = document.querySelector('#musicTable tbody');
   tbody.innerHTML = '';
 
-  const rows = stableSingleSort(allRows);
-
-  rows.forEach(row => {
+  currentRows.forEach(row => {
     const base = row.base_path;
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -57,6 +40,15 @@ function renderTable() {
   });
 }
 
+function sortBy(field, asc) {
+  currentRows.sort((a, b) => {
+    const va = (a[field] || '').trim();
+    const vb = (b[field] || '').trim();
+    const cmp = va.localeCompare(vb, 'he');
+    return asc ? cmp : -cmp;
+  });
+}
+
 function setupSorting() {
   document.querySelectorAll('th[data-sort]').forEach(th => {
     th.addEventListener('click', () => {
@@ -69,6 +61,7 @@ function setupSorting() {
         currentSort.asc = true;
       }
 
+      sortBy(currentSort.field, currentSort.asc);
       renderTable();
     });
   });
@@ -77,7 +70,7 @@ function setupSorting() {
 fetch('pieces.csv')
   .then(res => res.text())
   .then(text => {
-    allRows = parseCSV(text);
+    currentRows = parseCSV(text);
     setupSorting();
     renderTable();
   });
